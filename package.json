@@ -1,0 +1,26 @@
+{
+  "name": "witt",
+  "version": "1.0.3",
+  "description": "Whisk Information Timeline Tool",
+  "main": "witt.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.ibm.com/Kerry-Chang/witt"
+  },
+  "keywords": [
+    "OpenWhisk"
+  ],
+  "author": "Kerry Chang",
+  "license": "ISC",
+  "dependencies": {
+    "expand-home-dir": "0.0.3",
+    "minimist": "^1.2.0",
+    "openwhisk": "^3.6.0",
+    "opn": "^5.0.0",
+    "properties-parser": "^0.3.1",
+    "socket.io": "^2.0.1"
+  }
+}

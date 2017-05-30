@@ -319,11 +319,13 @@ function getAllActivations(limit, cb, acts) {
     if(!acts) acts=[];
     let lim = ((limit-acts.length)>200? 200 : limit-acts.length);
     ow.activations.list({limit:lim, docs:true, skip:acts.length}).then(result => {
+    	acts = acts.concat(result);
+        console.log("Retrieved "+acts.length+" activations...");    
+
         if(result.length === 0 || acts.length >= limit) 
         	return cb(acts);
-        acts = acts.concat(result);
-        console.log("Retrieved "+acts.length+" activations...");        
-        getAllActivations(limit, cb, acts);
+        else
+        	getAllActivations(limit, cb, acts);
     }).catch(function(e){
 		console.log(e);
 	});
@@ -372,10 +374,7 @@ function getOpenwhiskData(limit, fontInfo){
 				else
 					return 0;
 			}
-		});
-
-
-		console.log("Retrieved "+atvs.length+" activation records.");
+		});		
 
 
 		var entityCalls = [], tempNames = [];

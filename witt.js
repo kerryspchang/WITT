@@ -319,7 +319,7 @@ function getAllActivations(limit, cb, acts) {
     if(!acts) acts=[];
     let lim = ((limit-acts.length)>200? 200 : limit-acts.length);
     ow.activations.list({limit:lim, docs:true, skip:acts.length}).then(result => {
-        if(result.length === 0 || acts.length >= MAX_ACTS) 
+        if(result.length === 0 || acts.length >= limit) 
         	return cb(acts);
         acts = acts.concat(result);
         console.log("Retrieved "+acts.length+" activations...");        
@@ -335,6 +335,8 @@ function getOpenwhiskData(limit, fontInfo){
 
 	if(limit == undefined)
 		limit = defaultLimit;
+	if(limit > MAX_ACTS)
+		limit = MAX_ACTS;
 
 	var atvsDic, atvsDicId;
 	var entities = [];
@@ -351,6 +353,12 @@ function getOpenwhiskData(limit, fontInfo){
 				atvs.push(data);						
 			}));
 		});		*/
+
+		if(atvs.length == 0){
+			console.log("Witt retrieved 0 activations. Check if the wskprops file is picked up correctly.");
+			process.exit(0);
+		}
+
 		atvs.sort(function(a, b){
 			if(b.start-a.start != 0)
 				return b.start-a.start;
@@ -605,8 +613,10 @@ function removeBinaryCode(entity){
 	// how to check if something's code is binary?? :/ 
 
 	if(entity.kind == "action"){
-		
 		if(entity.exec != undefined){
+			if(entity.exec.binary){
+				return true;
+			}
 			if(entity.exec.kind.indexOf("nodejs") != -1 && entity.exec.code.indexOf("function") == -1){
 				// is nodejs but the code does not contain the word function
 				return true;

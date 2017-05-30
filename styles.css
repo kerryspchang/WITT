@@ -94,6 +94,11 @@ body{
 	font-size:12px;
 }
 
+#min, #max {
+	color:blue;
+	cursor: default;
+}
+
 #costSpan {
 	position: relative;
 	top:-2px;

@@ -327,27 +327,63 @@
 		var e = atvsFullData.e[name].summary[value];
 
 		// peformance
-		var durations = [], r = [];
+		var durations = [], r = [], sum = 0;
 		e.activations.forEach(function(id){
 			let a = atvsFullData.a[id];
-			durations.push(a.end-a.start);
+			durations.push({time:a.end-a.start, id:id});
+			sum += (a.end - a.start);
 			r.push({r: a.response.result, id:id});
 		});
-		durations.sort();
-		$("#avg").html(Math.round(durations.reduce((a,b)=>a+b, 0)/durations.length));
+		durations.sort((a, b) => a.time-b.time);
+		$("#avg").html(Math.round(sum/durations.length));
 		var median;
 		if(durations.length%2 == 0){
 			let i = durations.length/2;
-			median = Math.round((durations[i]+durations[i-1])/2);
+			median = Math.round((durations[i].time+durations[i-1].time)/2);
 		}
 		else{
 			let i = (durations.length-1)/2;
-			median = durations[i];
+			median = durations[i].time;
 		}
 		$("#median").html(median+"");
 
-		$("#min").html(durations[0]+"");
-		$("#max").html(durations[durations.length-1]+"");
+		$("#min").html(durations[0].time+"").attr("src", durations[0].id);		
+
+		$("#max").html(durations[durations.length-1].time+"").attr("src", durations[durations.length-1].id);
+
+		$("#min, #max").on("mouseover", function(d){				
+			if(!detailLock){											
+				atvDetail($(this).attr("src"), true)					
+			}
+		})
+		.on("mouseout", function(d){
+			if(!detailLock){
+				atvDetail("", false)					
+			}
+		})
+		.on("click", function(e){
+			e.stopPropagation();	
+			if(!detailLock){
+				// hover mode, lock it					
+				currentItem = $(this).attr("src");
+				detailLock = true;				
+			}
+			else{
+				// already locked
+				if(currentItem == $(this).attr("src")){
+					// if click on self, unlock
+					detailLock = false;
+					currentItem = "";
+					atvDetail("", false);
+				}
+				else{
+					// if click on other object, display other object
+					currentItem = $(this).attr("src");
+					atvDetail($(this).attr("src"), true);
+
+				}					
+			}			
+		});;
 
 		// pre 
 		var pre = {}, preString = "", preSelectString = "";
@@ -417,10 +453,10 @@
 		if(pre == "" || next == "")
 			return;
 
-		console.log("reprint summary: ", name, value, pre, next);		
+		//console.log("reprint summary: ", name, value, pre, next);		
 		$("#outputSummary").html("");
 		var summaryResult = {}, e =atvsFullData.e[name].summary[value];
-		console.log(e);
+		
 		var rObj = [], rId = [];
 		e.activations.forEach(function(id, index){			
 			if((pre == "all" || (pre == e.pre[index]) || (atvsFullData.a[e.pre[index]]!=undefined && atvsFullData.a[e.pre[index]].name == pre)) &&
@@ -436,7 +472,7 @@
 		});*/
 		atvsFullData.e[name].summaryResult[value] = summaryResult;
 
-		console.log(summaryResult);
+		//console.log(summaryResult);
 		
 		$("#outputSummary").html("<pre>"+printableSummary(summaryResult, name, value)+"</pre>");
 
@@ -901,7 +937,13 @@
 			var b = g.selectAll(".bar").data(bins);
 
 			bar = b.enter().append("g").attr("class", "bar")
-						.attr("transform", function(d) { return "translate(" + (x(d.x0)+yLabelWidth) + "," + (y(d.length)+histogramLabelHeight) + ")"; });
+						.attr("transform", function(d) { return "translate(" + (x(d.x0)+yLabelWidth) + "," + (y(d.length)+histogramLabelHeight) + ")"; })
+						.attr("startTime", function(d) {							
+							return d.x0;
+						})
+						.attr("endTime", function(d) {
+							return d.x1;
+						});
 
 			bar.append("rect")
 				.attr("class", "successBars")
@@ -927,7 +969,7 @@
 
 			    })
 			    .style("fill", timelineBarColor.success)
-			    .on("mouseover", function(d){
+			    /*.on("mouseover", function(d){
 			    	$(this).css("fill", timelineBarColor.hover);
 			    	d.forEach(function(o){
 			    		if(o.error.success)
@@ -940,7 +982,7 @@
 			    	d.forEach(function(o){
 				    	$("#"+o.id).css("fill", timelineBarColor[o.k]);
 				    });
-			    });
+			    })*/;
 
 			bar.append("rect")
 				.attr("class", "errorBars")		
@@ -958,7 +1000,7 @@
 
 			    })
 			    .style("fill", timelineBarColor.error)
-			    .on("mouseover", function(d){
+			    /*.on("mouseover", function(d){
 			    	$(this).css("fill", timelineBarColor.hover);
 			    	d.forEach(function(o){
 			    		if(!o.error.success){
@@ -973,7 +1015,7 @@
 				    	$("#"+o.id).css("fill", timelineBarColor[o.k]);
 				    	$("#"+o.id+"_error").css("fill", timelineBarColor.error);
 				    });
-			    });
+			    })*/;
 
 			
 
@@ -1116,7 +1158,7 @@
 			})
 			.on("mouseout", function(d){
 				if(!detailLock){
-					$(this).children("*").css("text-decoration", "none");					
+					//$(this).children("*").css("text-decoration", "none");					
 					atvDetail(d.activationId, false)					
 				}
 			})
@@ -1147,6 +1189,9 @@
 		row.append("div").style("width", "20%").style("display", "inline-block").html(function(d){return d.name;});
 		row.append("div").style("width", "10%").style("display", "inline-block").html(function(d){return d.kind;});
 		row.append("div").style("width", "35%").style("text-align", "right").style("display", "inline-block").html(function(d){return format(d.start);});
+
+		if(currentItem.length>0)
+			syncStyle(currentItem, true);
 
 	}
 
@@ -1408,7 +1453,8 @@
 		$(".x").find(".tick").last().find("text").css("text-anchor", "end");
 
 		//var xAxis = d3.axisBottom(x).ticks(10).tickFormat(function(d){return format(new Date(d));})
-		
+		if(currentItem.length>0)
+			syncStyle(currentItem, true);
 
 	};
 
@@ -1419,13 +1465,25 @@
 		}
 	});
 
-	function atvDetail(id, show){
+	function syncStyle(id, show){
 		if(!show){
 			$(".timelineBars").css("stroke", "none");
 			$(".labels").css("text-decoration", "none");
 			$(".listItem").children("*").css("text-decoration", "none");
 			$("#atvInfoDiv").css("visibility", "hidden");
-			$("#jsonDetail").html("");				
+			$("#jsonDetail").html("");
+			$("#min, #max").css("text-decoration", "none");
+
+			$("#atvInfoAndButtonsDiv").css("display", "none");
+			$(".bar[currentItem=true]").children("rect").each(function(){
+				if($(this).attr("class") == "successBars"){
+					$(this).css("fill", timelineBarColor.success);
+				}
+				else{
+					$(this).css("fill", timelineBarColor.error);
+				}
+				$(this).removeAttr("currentItem");
+			});
 		}
 		else{
 
@@ -1433,11 +1491,43 @@
 			$(".timelineBars").css("stroke", "none");
 			$(".labels").css("text-decoration", "none");
 			$(".listItem").children("*").css("text-decoration", "none");
+			$("#min, #max").css("text-decoration", "none");
 			let rect = $("#"+id);			
 			$(rect).css("stroke", "orangered");
 			$(rect).next().next().css("text-decoration", "underline");
 			$("#"+id+"List").children("*").css("text-decoration", "underline");	
+			$("#min[src='"+id+"']").css("text-decoration", "underline");	
+			$("#max[src='"+id+"']").css("text-decoration", "underline");	
 
+			$("#atvInfoAndButtonsDiv").css("display", "block");
+			$(".bar").each(function(){
+				var st = atvsFullData.a[id].start;
+				//console.log(st, $(this).attr("startTime"), $(this).attr("endTime"));
+				if($(this).attr("startTime")<=st && $(this).attr("endTime")>=st){					
+					// highlight this
+					if(atvsFullData.a[id].response.success){
+						$(this).children(".successBars").css("fill", timelineBarColor.hover);
+					}
+					else{
+						$(this).children(".errorBars").css("fill", timelineBarColor.hover);
+					}
+					$(this).attr("currentItem", true);
+				}
+				else{
+					$(this).children(".successBars").css("fill", timelineBarColor.success);
+					$(this).children(".errorBars").css("fill", timelineBarColor.error);
+					$(this).removeAttr("currentItem");
+				}
+			});
+			
+		}
+	}
+
+	function atvDetail(id, show){
+		syncStyle(id, show);
+		if(show){
+
+			syncStyle(id, show);
 			// ----- end ----------
 
 			$("#rawJSONAtv").html("");
@@ -1451,7 +1541,7 @@
 			$("#actionName").html(a.name);
 			if(a.kind == "action"){
 				let msg = a.kind;
-				if(atvsFullData.e[a.name] && atvsFullData.e[a.name].exec.kind)
+				if(atvsFullData.e[a.name] && atvsFullData.e[a.name].exec && atvsFullData.e[a.name].exec.kind)
 					msg = atvsFullData.e[a.name].exec.kind + " " + msg;
 				$("#actionType").html(msg);
 			}
@@ -1463,7 +1553,7 @@
 
 			// any warning text to show? 
 			if(atvsFullData.e[a.name] && atvsFullData.e[a.name].deleted){
-				var s = "<i><b>Note</b>: The system could not retrieve details of this "+a.kind+" from the server. The "+a.kind+" is probably deleted. </i><br/><br/>";
+				var s = "<i><b>Note</b>: The system could not retrieve details of this "+a.kind+" from the server. The "+a.kind+" was probably deleted. </i><br/><br/>";
 				$("#warningDiv").html(s);
 				$("#warningDiv").css("display", "inline-block");
 			}
@@ -1708,6 +1798,32 @@
 					}
 
 					$(this).next().html(msg);
+					$(this).next().find("a").mouseover(function(e){
+						var id = $(this).attr("source");
+						if(id)
+							$("#"+id).css("fill", timelineBarColor.hover);
+					}).mouseout(function(e){
+						var id = $(this).attr("source");
+						if(id)
+							$("#"+id).css("fill", timelineBarColor[atvsFullData.a[id].kind]);
+						/*var color = $("#"+id).css("stroke");				
+						if(color == "rgb(255, 255, 0)")
+							$("#"+id).css("stroke", "none");*/
+						
+					}).click(function(e){
+						e.stopPropagation();
+						var id = $(this).attr("source");
+						if(id){
+							$("#"+currentItem).css("stroke", "none");
+							
+							$("#"+id).css("fill", timelineBarColor[atvsFullData.a[id].kind])
+							$("#"+id).css("stroke", "orangered");
+
+							currentItem = id;
+							atvDetail(id, true);	
+						}							
+					});
+
 				});
 
 				$(invokeMsg).find("#sortSeq").trigger("change");
@@ -1719,9 +1835,11 @@
 				if(a.cause != undefined){
 					// in a sequence, find the next action in the sequence
 					var atv_pat = atvsFullData.a[a.cause];
-					var index = atv_pat.logs.indexOf(a.activationId);
-					if(index != atv_pat.logs.length-1){
-						invokeMsg += domActivationText(atv_pat.logs[index+1]);					
+					if(atv_pat != undefined && atv_pat.logs != undefined){
+						var index = atv_pat.logs.indexOf(a.activationId);
+						if(index != atv_pat.logs.length-1){
+							invokeMsg += domActivationText(atv_pat.logs[index+1]);					
+						}
 					}
 				}
 			}
@@ -1819,6 +1937,7 @@
 				$("#codeLink").css("display", "none");
 			}
 
+			// all a
 			$("#atvInfo").find("a").mouseover(function(e){
 				var id = $(this).attr("source");
 				if(id)

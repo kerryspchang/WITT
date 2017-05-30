@@ -1,3 +1,6 @@
+#!/usr/bin/env node --harmony
+
+
 /*
  * Copyright 2015-2016 IBM Corporation
  *
@@ -14,27 +17,29 @@
  * limitations under the License.
  */
 
+
 const url = require("url"),
 	path = require("path"),
 	fs = require('fs'),
 	https = require('https'),
 	http = require('http'),
 	io = require('socket.io'),
+	argv = require('minimist')(process.argv.slice(2)),
 	propertiesParser = require('properties-parser'),
     expandHomeDir = require('expand-home-dir'),
     wskprops = propertiesParser.read(process.env.WSK_CONFIG_FILE || expandHomeDir('~/.wskprops')),
 	owProps = {
 		apihost: wskprops.APIHOST || 'openwhisk.ng.bluemix.net',
-		api_key: wskprops.AUTH,
+		api_key: argv["key"] || wskprops.AUTH,
 		namespace: wskprops.NAMESPACE || '_',
 		ignore_certs: process.env.NODE_TLS_REJECT_UNAUTHORIZED == "0"
     },
-    ow = require('openwhisk')(owProps),
-    argv = require('minimist')(process.argv.slice(2)),
+    ow = require('openwhisk')(owProps),    
     opn = require('opn');
 
 const removeBinaryCodeMsg = "Removed binary code.",
-	  defaultLimit = 20;
+	  defaultLimit = 20,
+	  MAX_ACTS = 2000;
 
 
 
@@ -45,7 +50,9 @@ var owData, fontInfo;
 var server = http.createServer(
 	function (request, response){
 		var uri = url.parse(request.url).pathname;
-		var filename = path.join(process.cwd(), uri);				
+		var dir = path.resolve(__dirname);		
+		//var filename = path.join(process.cwd(), uri);
+		var filename = path.join(dir, uri);				
 
 		fs.exists(filename, function(exists) {
 							
@@ -82,10 +89,8 @@ var server = http.createServer(
 	}
 
 	if(argv["h"] || argv["help"]){
-		console.log("By default, the system displays the most recent 200 activations from OpenWhisk server (node witt.js)");
-		console.log("Use 'limit' to specify the number of activations (less than 200) that you want to view (ex. node witt.js --limit=50)");
-		console.log("The tool supports exporting the selected activations from the UI as a local JSON file. This allows the user to show a specific set of data without internet connections.");
-		console.log("Use 'file' to show data in an exported JSON file (ex. node witt.js --file=data.json)");
+		console.log("Use 'limit' to specify the number of activations (default 20, max 200) that you want to view (ex. witt --limit=50)");		
+		console.log("Use 'file' to show data in an exported JSON file (ex. witt --file=data.json)");
 
 		server.close();
 		return;
@@ -308,6 +313,22 @@ io(server).sockets.on("connection", function(socket){
 
 });
 
+// reuse the code from Raymond Camden's blog post
+// https://www.raymondcamden.com/2017/05/15/my-own-openwhisk-stat-tool/
+function getAllActivations(limit, cb, acts) {
+    if(!acts) acts=[];
+    let lim = ((limit-acts.length)>200? 200 : limit-acts.length);
+    ow.activations.list({limit:lim, docs:true, skip:acts.length}).then(result => {
+        if(result.length === 0 || acts.length >= MAX_ACTS) 
+        	return cb(acts);
+        acts = acts.concat(result);
+        console.log("Retrieved "+acts.length+" activations...");        
+        getAllActivations(limit, cb, acts);
+    }).catch(function(e){
+		console.log(e);
+	});
+}
+
 
 
 function getOpenwhiskData(limit, fontInfo){
@@ -320,7 +341,7 @@ function getOpenwhiskData(limit, fontInfo){
 
 	console.log("Getting data from OpenWhisk server...");
 
-	ow.activations.list({limit:limit, docs:true}).then(function(atvs){	
+	getAllActivations(limit, (atvs) => {		
 		/*console.log(result[0]);
 		var rr = [];
 		
@@ -346,7 +367,7 @@ function getOpenwhiskData(limit, fontInfo){
 		});
 
 
-		console.log("Retrieved the most recent "+atvs.length+" activation records.");
+		console.log("Retrieved "+atvs.length+" activation records.");
 
 
 		var entityCalls = [], tempNames = [];
@@ -570,10 +591,14 @@ function getOpenwhiskData(limit, fontInfo){
 			console.log(e);
 		});
 
+	});
+
+	/*ow.activations.list({limit:limit, docs:true}).then(function(atvs){	
+		
 		
 	}).catch(function(e){
 		console.log(e);
-	});
+	});*/
 }
 
 function removeBinaryCode(entity){

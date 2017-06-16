@@ -13,6 +13,8 @@ Scenario: Viewing 200 activations of a chatbot application that was implemented 
 npm install witt -g 
 ```
 
+Note: Witt is a web app and is tested in Chrome. It currently does not work in Firefox. I'm working on fixing it. 
+
 ## Run
 By default, Witt retrieves the most recent 20 activations. Simply run
 ```

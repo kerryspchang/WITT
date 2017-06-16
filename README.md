@@ -1,7 +1,7 @@
 # Whisk Information Timeline Tool (WITT)
 
 ## Goal
-The goal of Witt is to explore new visualizations and analysis of OpenWhisk's activation logs to support debugging and program understanding. 
+Witt is a research prototype aiming to explore new visualizations and analysis of OpenWhisk's activation logs to support debugging and program understanding.  
 
 ## Demo Video
 Scenario: Viewing 200 activations of a chatbot application that was implemented as a sequence. Using the timeline view to understand its composition & find the most time-consuming action. Using the summary view to view all activations of that action, how its output data changed with respect to different output actions, and get the slowest activation of the action. Switching back to the timeline view to locate that activation and view the entire sequence. 

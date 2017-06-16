@@ -31,7 +31,7 @@ Use `file` to read activations from a local file. I'll explain this more later.
 $ witt --file=data.json
 ```
 
-Use `key` to provide a OpenWhisk key manually
+Use `key` to provide a OpenWhisk auth key manually
 ```
 $ witt --key=XXXXXXXXXXXXX
 ```
